@@ -110,6 +110,12 @@ export default function OnboardingForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const watchedLessons = useWatch({ control: form.control, name: "lessons" });
+  const watchedDiscount = useWatch({ control: form.control, name: "discount" }) || 0;
+  
+  const grossTotal = watchedLessons?.reduce((sum, item) => sum + ((Number(item.totalHours) || 0) * (Number(item.pricePerHour) || 0)), 0) || 0;
+  const liveTotalValue = Math.round(grossTotal * (1 - (watchedDiscount / 100)));
+
   const watchedValues = useWatch({ control: form.control });
 
   // Save to localStorage on change
@@ -119,18 +125,69 @@ export default function OnboardingForm() {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
   }, [watchedValues, currentStepIndex, mounted]);
 
+  const courseStart = useWatch({ control: form.control, name: "courseStart" });
+
+  // Effect to set default end dates based on start date
+  useEffect(() => {
+    // This effect runs whenever the 'courseStart' date changes.
+    if (courseStart) {
+      const startDate = new Date(courseStart);
+      const courseEndValue = form.getValues("courseEnd");
+      const validUntilValue = form.getValues("validUntil");
+
+      // --- Course End Date Logic ---
+      // The default end date is 1 month after the start date.
+      const defaultEndDate = new Date(startDate);
+      defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
+      const defaultEndDateString = defaultEndDate.toISOString().split("T")[0];
+
+      // We only update the 'courseEnd' field if it's empty,
+      // or if the currently set date has become invalid (i.e., it's now earlier than our new default).
+      // This prevents overwriting a valid, manually entered date (e.g., a 2-month contract).
+      if (!courseEndValue || courseEndValue < defaultEndDateString) {
+        form.setValue("courseEnd", defaultEndDateString, { shouldValidate: true });
+      }
+
+      // --- "Valid Until" Date Logic ---
+      // The default "valid until" date is 1 year after the start date.
+      const defaultValidUntilDate = new Date(startDate);
+      defaultValidUntilDate.setFullYear(defaultValidUntilDate.getFullYear() + 1);
+      const defaultValidUntilString = defaultValidUntilDate.toISOString().split("T")[0];
+
+      // Similarly, we only update this field if it's empty or has become invalid.
+      if (!validUntilValue || validUntilValue < defaultValidUntilString) {
+        form.setValue("validUntil", defaultValidUntilString, { shouldValidate: true });
+      }
+    }
+  }, [courseStart, form]);
+
+  // Effect to set default payment plan
+  useEffect(() => {
+    if (steps[currentStepIndex]?.id === 'billing') {
+      const payments = form.getValues('payments');
+      if (liveTotalValue > 0 && payments.length === 1 && payments[0].amount === 0 && payments[0].date === "") {
+        const paymentDate = new Date();
+        paymentDate.setDate(paymentDate.getDate() + 7);
+        
+        form.setValue('payments', [{ date: paymentDate.toISOString().split('T')[0], amount: liveTotalValue }], { shouldValidate: true });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStepIndex, liveTotalValue, form]);
+
+  const minEndDate = useMemo(() => {
+    if (!courseStart) return undefined;
+    const date = new Date(courseStart);
+    date.setMonth(date.getMonth() + 1);
+    return date.toISOString().split('T')[0];
+  }, [courseStart]);
+
   const clientType = form.watch("clientType");
   const steps = useMemo(() => allPossibleSteps.filter(s => !s.businessOnly || clientType === 'business'), [clientType]);
 
   useEffect(() => {
     if (currentStepIndex >= steps.length) setCurrentStepIndex(0);
   }, [steps, currentStepIndex]);
-
-  const watchedLessons = useWatch({ control: form.control, name: "lessons" });
-  const watchedDiscount = useWatch({ control: form.control, name: "discount" }) || 0;
-  
-  const grossTotal = watchedLessons?.reduce((sum, item) => sum + ((Number(item.totalHours) || 0) * (Number(item.pricePerHour) || 0)), 0) || 0;
-  const liveTotalValue = Math.round(grossTotal * (1 - (watchedDiscount / 100)));
 
   const next = async () => {
     const fields = getFieldsForStep(currentStepIndex, steps, form.getValues());
@@ -182,6 +239,7 @@ export default function OnboardingForm() {
 
   if (!mounted) return null;
   const currentStepId = steps[currentStepIndex]?.id;
+  const watchedCourseEnd = form.watch("courseEnd");
 
   return (
     <Card className="w-full max-w-xl mx-auto rounded-2xl shadow-lg border border-slate-200 bg-white my-8 overflow-hidden">
@@ -284,9 +342,9 @@ export default function OnboardingForm() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       <DateField form={form} name="courseStart" label="Start Date" />
-                      <DateField form={form} name="courseEnd" label="End Date" />
+                      <DateField form={form} name="courseEnd" label="End Date" min={minEndDate} />
                     </div>
-                    <DateField form={form} name="validUntil" label="Offer Valid Until" />
+                    <DateField form={form} name="validUntil" label="Offer Valid Until" min={watchedCourseEnd} />
                     <Separator />
                     <PaymentBuilder form={form} calculatedTotal={liveTotalValue} />
                   </div>
@@ -441,12 +499,12 @@ function SelectField({ form, name, label, items }: any) {
   );
 }
 
-function DateField({ form, name, label }: any) {
+function DateField({ form, name, label, min }: any) {
   return (
     <FormField control={form.control} name={name} render={({ field }) => (
       <FormItem className="space-y-1.5 flex-1">
         <FormLabel className="text-xs font-bold text-slate-600 uppercase">{label}</FormLabel>
-        <FormControl><Input type="date" {...field} className="h-11 rounded-xl bg-white" /></FormControl>
+        <FormControl><Input type="date" {...field} min={min} className="h-11 rounded-xl bg-white" /></FormControl>
       </FormItem>
     )} />
   );
@@ -498,13 +556,37 @@ function LessonList({ form }: { form: UseFormReturn<FormData> }) {
 
 function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index: number }) {
   const [day, setDay] = useState("Monday");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  
+  // Split startTime into separate states for better control
+  const [startHour, setStartHour] = useState("10");
+  const [startMinute, setStartMinute] = useState("00");
   const [localError, setLocalError] = useState<string | null>(null);
 
   const fieldName: FieldPath<FormData> = `lessons.${index}.schedule`;
+  const lessonFormat = form.watch(`lessons.${index}.format`);
   const currentSchedule = form.watch(fieldName) || "";
   const fieldError = form.formState.errors.lessons?.[index]?.schedule?.message as string | undefined;
+
+  // Combine hours and minutes for logic
+  const startTime = `${startHour}:${startMinute}`;
+
+  const endTime = useMemo(() => {
+    if (!startTime) return "";
+    try {
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(hours, minutes, 0, 0);
+      
+      const duration = parseInt(lessonFormat);
+      startDate.setMinutes(startDate.getMinutes() + duration);
+
+      const endHours = startDate.getHours().toString().padStart(2, '0');
+      const endMinutes = startDate.getMinutes().toString().padStart(2, '0');
+      return `${endHours}:${endMinutes}`;
+    } catch {
+      return "";
+    }
+  }, [startTime, lessonFormat]);
 
   const slots = useMemo(() => currentSchedule ? currentSchedule.split(", ").filter(Boolean).map((s: string) => {
     const [d, t] = s.split(" ");
@@ -513,17 +595,9 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
 
   const addSlot = () => {
     setLocalError(null);
-    if (!startTime || !endTime) return; // Should be disabled anyway
-    if (startTime >= endTime) {
-      setLocalError("End time must be after start time.");
-      return;
-    }
-    
     const newSlot = `${day} ${startTime}-${endTime}`;
     const newSchedule = currentSchedule ? `${currentSchedule}, ${newSlot}` : newSlot;
     form.setValue(fieldName, newSchedule, { shouldValidate: true });
-    setStartTime("");
-    setEndTime("");
   };
 
   const removeSlot = (slotIndex: number) => {
@@ -531,7 +605,9 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
     form.setValue(fieldName, newSchedule, { shouldValidate: true });
   };
 
-  const canAdd = startTime && endTime && startTime < endTime;
+  // Generate arrays for the selects
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = ["00", "15", "30", "45"];
 
   return (
     <div className="space-y-2">
@@ -548,22 +624,56 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
           </div>
         ) : (
           <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg text-center border border-dashed">
-            No schedule slots added. Use the controls below to build the weekly schedule.
+            No schedule slots added.
           </div>
         )}
-        <div className="flex gap-2 items-end pt-2 border-t border-slate-100">
-          <select value={day} onChange={e => setDay(e.target.value)} className="h-10 rounded-lg border-slate-200 bg-slate-50 px-2 text-sm flex-1 shadow-sm">
+
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+          {/* Day Selection */}
+          <select 
+            value={day} 
+            onChange={e => setDay(e.target.value)} 
+            className="h-10 rounded-lg border-slate-200 bg-slate-50 px-2 text-sm flex-[1.5] shadow-sm outline-none focus:ring-2 focus:ring-primary/20"
+          >
             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(d => <option key={d}>{d}</option>)}
           </select>
-          <Input placeholder="Start" type="time" value={startTime} onChange={e => { setStartTime(e.target.value); setLocalError(null); }} className={cn("h-10 w-24 text-sm", localError && "border-destructive")} />
-          <Input placeholder="End" type="time" value={endTime} onChange={e => { setEndTime(e.target.value); setLocalError(null); }} className={cn("h-10 w-24 text-sm", localError && "border-destructive")} />
-          <Button type="button" size="sm" onClick={addSlot} disabled={!canAdd} className="h-10 px-4 font-bold">Add</Button>
+
+          {/* Hour Selection */}
+          <div className="flex items-center gap-1 flex-1">
+            <select 
+              value={startHour} 
+              onChange={e => setStartHour(e.target.value)}
+              className="h-10 w-full rounded-lg border-slate-200 bg-slate-50 px-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              {hours.map(h => <option key={h} value={h}>{h}</option>)}
+            </select>
+            <span className="font-bold text-slate-400">:</span>
+            {/* Minute Selection - Restricted to 00, 15, 30, 45 */}
+            <select 
+              value={startMinute} 
+              onChange={e => setStartMinute(e.target.value)}
+              className="h-10 w-full rounded-lg border-slate-200 bg-slate-50 px-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+
+          {/* Calculated End Time Display */}
+          <div className="flex flex-col flex-1">
+            {/* <span className="text-[10px] text-slaete-400 uppercase font-bold text-center">Ends at</span> */}
+            <div className="h-10 flex items-center justify-center rounded-lg bg-slate-100 border border-slate-200 text-sm font-semibold text-slate-600">
+              end : {endTime}
+            </div>
+          </div>
+
+          <Button type="button" size="sm" onClick={addSlot} className="h-10 px-4 font-bold">Add</Button>
         </div>
       </div>
       {(localError || fieldError) && <p className="text-[11px] font-medium text-destructive px-1">{localError || fieldError}</p>}
     </div>
   );
 }
+
 
 function LiveTotalSummary({ form }: any) {
   const lessons = useWatch({ control: form.control, name: "lessons" });
@@ -580,6 +690,7 @@ function LiveTotalSummary({ form }: any) {
     </div>
   );
 }
+
 
 function PaymentBuilder({ form, calculatedTotal }: any) {
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "payments" });

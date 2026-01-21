@@ -98,11 +98,15 @@ export const formSchema = z.object({
   if (data.courseStart && data.courseEnd) {
     const courseStartDate = new Date(data.courseStart);
     const courseEndDate = new Date(data.courseEnd);
-    if (courseEndDate <= courseStartDate) {
+
+    const minEndDate = new Date(courseStartDate);
+    minEndDate.setMonth(minEndDate.getMonth() + 1);
+
+    if (courseEndDate < minEndDate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['courseEnd'],
-        message: 'Course end date must be after the start date.',
+        message: 'End date must be at least one month after the start date.',
       });
     }
   }
