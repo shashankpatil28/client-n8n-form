@@ -626,7 +626,7 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
     const totalContractMinutes = (Number(totalHours) || 0) * 60;
     if (totalContractMinutes > 0) {
       const scheduledMinutes = parsedExistingSlots.reduce((sum, slot) => {
-        const durationMs = slot.end.getTime() - slot.start.getTime();
+        const durationMs = slot.endDate.getTime() - slot.startDate.getTime();
         return sum + (durationMs / (1000 * 60));
       }, 0);
 
