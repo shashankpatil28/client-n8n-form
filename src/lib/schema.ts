@@ -1,6 +1,62 @@
 import { z } from "zod";
 import { isValidPhoneNumber } from "react-phone-number-input";
 
+// Helper to parse a single schedule slot string
+// Example: "Monday 10:00-11:00" -> { day: "Monday", start: Date, end: Date, original: "Monday 10:00-11:00" }
+export const parseSingleScheduleSlot = (slotString: string) => {
+  const match = slotString.match(/^(\w+) (\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
+  if (!match) {
+    console.warn(`Invalid schedule slot format: "${slotString}"`);
+    return null; // Invalid format
+  }
+
+  const [, day, startHourStr, startMinuteStr, endHourStr, endMinuteStr] = match;
+
+  const startHour = parseInt(startHourStr, 10);
+  const startMinute = parseInt(startMinuteStr, 10);
+  const endHour = parseInt(endHourStr, 10);
+  const endMinute = parseInt(endMinuteStr, 10);
+
+  // Use a fixed date (e.g., Jan 1, 2000, a Saturday) to compare times and days of week
+  // This avoids issues with actual dates and only focuses on time and day.
+  const baseDate = new Date('2000-01-01T00:00:00'); // Jan 1, 2000 was a Saturday
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayIndex = daysOfWeek.indexOf(day);
+
+  if (dayIndex === -1) {
+    console.warn(`Invalid day of week in schedule slot: "${day}"`);
+    return null; // Invalid day
+  }
+
+  const startDate = new Date(baseDate);
+  startDate.setDate(baseDate.getDate() + (dayIndex - baseDate.getDay() + 7) % 7); // Adjust to correct day of week
+  startDate.setHours(startHour, startMinute, 0, 0);
+
+  const endDate = new Date(baseDate);
+  endDate.setDate(baseDate.getDate() + (dayIndex - baseDate.getDay() + 7) % 7); // Adjust to correct day of week
+  endDate.setHours(endHour, endMinute, 0, 0);
+
+  // Handle overnight slots (e.g., 23:00-01:00) by advancing the end date by one day
+  if (endDate <= startDate) { // Use <= to catch 00:00-00:00 or 10:00-10:00 as invalid/overnight
+    endDate.setDate(endDate.getDate() + 1);
+  }
+
+  return { day, startDate, endDate, original: slotString };
+};
+
+// Helper to check for overlaps within an array of parsed schedule slots
+export const checkOverlappingSlots = (slots: NonNullable<ReturnType<typeof parseSingleScheduleSlot>>[]) => {
+  for (let i = 0; i < slots.length; i++) {
+    const slotA = slots[i];
+    for (let j = i + 1; j < slots.length; j++) {
+      const slotB = slots[j];
+      if (slotA.day === slotB.day && slotA.startDate < slotB.endDate && slotA.endDate > slotB.startDate) {
+        return `Overlapping schedule slots detected: "${slotA.original}" and "${slotB.original}" on ${slotA.day}.`;
+      }
+    }
+  }
+  return null; // No overlaps
+};
 export const formSchema = z.object({
   // Step 1: Settings
   language: z.enum(["English", "German"]).default("English"),
@@ -135,6 +191,42 @@ export const formSchema = z.object({
         code: z.ZodIssueCode.custom,
         path: ['payments'],
         message: `The sum of payments (${paymentTotal.toFixed(2)} CHF) must equal the final total (${netTotal.toFixed(2)} CHF).`,
+      });
+    }
+  }
+
+  // Schedule overlap validation
+  if (data.lessons && data.lessons.length > 0) {
+    const allParsedSlots: NonNullable<ReturnType<typeof parseSingleScheduleSlot>>[] = [];
+    const lessonSchedulePaths: (string | number)[] = [];
+
+    data.lessons.forEach((lesson, lessonIndex) => {
+      if (lesson.schedule) {
+        const individualSlots = lesson.schedule.split(", ").filter(Boolean);
+        individualSlots.forEach((slotString) => {
+          const parsedSlot = parseSingleScheduleSlot(slotString);
+          if (parsedSlot) {
+            allParsedSlots.push(parsedSlot);
+            lessonSchedulePaths.push(`lessons.${lessonIndex}.schedule`);
+          } else {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [`lessons`, lessonIndex, `schedule`],
+              message: `Invalid schedule format: "${slotString}". Expected "Day HH:MM-HH:MM".`,
+            });
+          }
+        });
+      }
+    });
+
+    const overlapError = checkOverlappingSlots(allParsedSlots);
+    if (overlapError) {
+      // Attach the error to the first lesson's schedule field if available, otherwise to the lessons array.
+      const errorPath = lessonSchedulePaths.length > 0 ? lessonSchedulePaths[0] : 'lessons';
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [errorPath],
+        message: overlapError,
       });
     }
   }

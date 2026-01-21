@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css"; // Ensure styles are imported
 import countryList from "react-select-country-list";
-
-import { formSchema, type FormData } from "@/lib/schema";
+import { formSchema, type FormData, parseSingleScheduleSlot, checkOverlappingSlots } from "@/lib/schema"; // Import helper functions
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -555,12 +554,12 @@ function LessonList({ form }: { form: UseFormReturn<FormData> }) {
 }
 
 function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index: number }) {
+  const { toast, dismiss } = useToast();
   const [day, setDay] = useState("Monday");
   
   // Split startTime into separate states for better control
   const [startHour, setStartHour] = useState("10");
   const [startMinute, setStartMinute] = useState("00");
-  const [localError, setLocalError] = useState<string | null>(null);
 
   const fieldName: FieldPath<FormData> = `lessons.${index}.schedule`;
   const lessonFormat = form.watch(`lessons.${index}.format`);
@@ -594,9 +593,45 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
   }) : [], [currentSchedule]);
 
   const addSlot = () => {
-    setLocalError(null);
-    const newSlot = `${day} ${startTime}-${endTime}`;
-    const newSchedule = currentSchedule ? `${currentSchedule}, ${newSlot}` : newSlot;
+    const newSlotString = `${day} ${startTime}-${endTime}`;
+
+    // Client-side pre-validation for the new slot format
+    const parsedNewSlot = parseSingleScheduleSlot(newSlotString);
+    if (!parsedNewSlot) {
+      form.setError(fieldName, {
+        type: "manual",
+        message: `Invalid schedule format: "${newSlotString}". Expected "Day HH:MM-HH:MM".`,
+      });
+      return;
+    }
+
+    // Get all existing slots and parse them for overlap check
+    const existingSlotStrings = currentSchedule.split(", ").filter(Boolean);
+    const parsedExistingSlots = existingSlotStrings
+      .map(s => parseSingleScheduleSlot(s))
+      .filter(Boolean) as NonNullable<ReturnType<typeof parseSingleScheduleSlot>>[];
+
+    // Combine existing and new slot for overlap check
+    const allSlotsForCheck = [...parsedExistingSlots, parsedNewSlot];
+
+    // Check for overlaps
+    const overlapError = checkOverlappingSlots(allSlotsForCheck);
+
+    if (overlapError) {
+      // Dismiss any existing toast to ensure the new one's animation triggers.
+      dismiss();
+      // Use a short timeout to allow the dismiss action to process before showing the new toast.
+      setTimeout(() => {
+        toast({
+          variant: "destructive",
+          title: "Schedule Conflict",
+          description: overlapError,
+        });
+      }, 100);
+      return;
+    }
+
+    const newSchedule = currentSchedule ? `${currentSchedule}, ${newSlotString}` : newSlotString;
     form.setValue(fieldName, newSchedule, { shouldValidate: true });
   };
 
@@ -669,7 +704,7 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
           <Button type="button" size="sm" onClick={addSlot} className="h-10 px-4 font-bold">Add</Button>
         </div>
       </div>
-      {(localError || fieldError) && <p className="text-[11px] font-medium text-destructive px-1">{localError || fieldError}</p>}
+      {fieldError && <p className="text-[11px] font-medium text-destructive px-1">{fieldError}</p>}
     </div>
   );
 }

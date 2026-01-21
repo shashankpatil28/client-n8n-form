@@ -4,7 +4,7 @@ import * as React from "react"
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -145,6 +145,7 @@ function toast(props: Toast) {
   dispatch({
     type: "ADD_TOAST",
     toast: {
+      duration: 5000, // Default duration of 5 seconds
       ...props,
       id,
       open: true,
@@ -172,7 +173,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,
@@ -182,4 +183,3 @@ function useToast() {
 }
 
 export { useToast, toast }
-
