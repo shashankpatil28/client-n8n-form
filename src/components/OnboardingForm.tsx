@@ -1,5 +1,6 @@
 "use client";
 
+import ThankYouCard from "./ThankYouCard";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import PhoneInput from "react-phone-number-input";
@@ -48,11 +49,12 @@ const allPossibleSteps = [
 ];
 
 const LOCAL_STORAGE_KEY = "onboardingFormState";
-const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
+const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
 
 export default function OnboardingForm() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { toast } = useToast();
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const form = useForm<FormData>({
@@ -89,7 +91,7 @@ export default function OnboardingForm() {
       const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedStateJSON) {
         const savedState = JSON.parse(savedStateJSON);
-        const isExpired = Date.now() - savedState.timestamp > ONE_DAY_IN_MS;
+        const isExpired = Date.now() - savedState.timestamp > FIFTEEN_MINUTES_IN_MS;
 
         if (!isExpired && savedState.data) {
           form.reset(savedState.data);
@@ -231,7 +233,9 @@ export default function OnboardingForm() {
       const res = await fetch(webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error();
       toast({ title: "Success! 🚀", description: `Contract generated. Total: ${liveTotalValue} CHF` });
+      setIsSubmitted(true);
     } catch (error) {
+      console.error("Submission error:", error);
       toast({ variant: "destructive", title: "Submission failed", description: "Could not reach n8n." });
     }
   };
@@ -239,6 +243,11 @@ export default function OnboardingForm() {
   if (!mounted) return null;
   const currentStepId = steps[currentStepIndex]?.id;
   const watchedCourseEnd = form.watch("courseEnd");
+
+  if (isSubmitted) {
+    return <ThankYouCard />;
+  }
+
 
   return (
     <Card className="w-full max-w-xl mx-auto rounded-2xl shadow-lg border border-slate-200 bg-white my-8 overflow-hidden">
