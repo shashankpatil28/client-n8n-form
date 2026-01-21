@@ -1,74 +1,102 @@
+# N8N Contract Onboarding Form
 
-# React + TypeScript + Vite
+A modern, multi-step onboarding form designed to streamline the contract generation process. Built with Vite, React, TypeScript, and shadcn/ui, this application provides a robust and user-friendly experience for collecting client and course information, culminating in a submission to an n8n webhook.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## ✨ Features
 
-Currently, two official plugins are available:
+- **Multi-Step Interface**: Guides users through logical sections with a clear progress indicator.
+- **Dynamic Form Logic**: Form steps adapt based on user input (e.g., showing "Company Details" only for business clients).
+- **Robust Validation**: Real-time, client-side validation powered by `Zod` and `react-hook-form`, providing instant feedback.
+- **Smart Defaults**: Intelligently pre-fills dates (e.g., contract end date, offer validity) to speed up data entry.
+- **Complex Field Builders**:
+    - **Lesson Packages**: Add multiple lesson types with custom pricing and hours.
+    - **Schedule Builder**: A sophisticated interface to add recurring time slots with 15-minute precision and automatic overlap detection.
+    - **Payment Plan**: An intuitive payment builder that helps manage installment amounts.
+- **State Persistence**: Automatically saves form progress to `localStorage`, allowing users to resume where they left off (with a 15-minute timeout).
+- **Responsive Design**: Clean and modern UI built with Tailwind CSS and `shadcn/ui`.
+- **Submission Handling**: Submits the final, validated data to a configurable n8n webhook and displays a "Thank You" confirmation.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🛠️ Tech Stack
 
-## React Compiler
+- **Framework**: React (with Vite)
+- **Language**: TypeScript
+- **UI**: shadcn/ui & Tailwind CSS
+- **Form Management**: React Hook Form
+- **Schema Validation**: Zod
+- **Animations**: Framer Motion
+- **Phone Input**: react-phone-number-input
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🚀 Getting Started
 
-## Expanding the ESLint configuration
+### Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js (v18 or later recommended)
+- npm or yarn
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Installation
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/your-repo/n8n-form-vite.git
+    cd n8n-form-vite
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+
+### Environment Variables
+
+Create a `.env.local` file in the root of the project and add your n8n webhook URL:
+
+```
+VITE_N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/your-id
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Running the Development Server
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+To start the local development server, run:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+The application will be available at `http://localhost:5173`.
+
+### Building for Production
+
+To create a production-ready build, run:
+
+```bash
+npm run build
+```
+
+The optimized static files will be generated in the `dist/` directory.
+
+## 📂 Project Structure
+
+```
+.
+├── public/
+├── src/
+│   ├── components/
+│   │   ├── ui/                 # shadcn/ui components
+│   │   ├── OnboardingForm.tsx  # Main form component and sub-components
+│   │   └── ThankYouCard.tsx    # Confirmation card after submission
+│   ├── hooks/
+│   │   └── use-toast.ts
+│   ├── lib/
+│   │   ├── schema.ts           # Zod validation schema and helpers
+│   │   └── utils.ts            # Utility functions (e.g., cn)
+│   ├── App.tsx
+│   └── main.tsx
+├── .env.local                  # Environment variables (not committed)
+├── package.json
+└── README.md
+```
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
