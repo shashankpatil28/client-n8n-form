@@ -76,7 +76,7 @@ export default function OnboardingForm() {
       payments: [{ date: "", amount: 0 }],
       hoursPerLesson: "60",
       discount: 0,
-      courseStart: "",
+      courseStart: new Date().toISOString().split("T")[0],
       courseEnd: "",
       validUntil: "",
     },
@@ -562,7 +562,7 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
   const [startMinute, setStartMinute] = useState("00");
 
   const fieldName: FieldPath<FormData> = `lessons.${index}.schedule`;
-  const lessonFormat = form.watch(`lessons.${index}.format`);
+  const { format: lessonFormat, totalHours } = form.watch(`lessons.${index}`);
   const currentSchedule = form.watch(fieldName) || "";
   const fieldError = form.formState.errors.lessons?.[index]?.schedule?.message as string | undefined;
 
@@ -593,6 +593,8 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
   }) : [], [currentSchedule]);
 
   const addSlot = () => {
+    form.clearErrors(fieldName);
+
     const newSlotString = `${day} ${startTime}-${endTime}`;
 
     // Client-side pre-validation for the new slot format
@@ -605,11 +607,31 @@ function ScheduleBuilder({ form, index }: { form: UseFormReturn<FormData>, index
       return;
     }
 
-    // Get all existing slots and parse them for overlap check
+    // Get all existing slots and parse them
     const existingSlotStrings = currentSchedule.split(", ").filter(Boolean);
     const parsedExistingSlots = existingSlotStrings
       .map(s => parseSingleScheduleSlot(s))
       .filter(Boolean) as NonNullable<ReturnType<typeof parseSingleScheduleSlot>>[];
+
+    // Validation: Ensure lesson duration doesn't exceed remaining contract time.
+    const totalContractMinutes = (Number(totalHours) || 0) * 60;
+    if (totalContractMinutes > 0) {
+      const scheduledMinutes = parsedExistingSlots.reduce((sum, slot) => {
+        const durationMs = slot.end.getTime() - slot.start.getTime();
+        return sum + (durationMs / (1000 * 60));
+      }, 0);
+
+      const lessonDurationMinutes = parseInt(lessonFormat);
+      const remainingMinutes = totalContractMinutes - scheduledMinutes;
+
+      if (lessonDurationMinutes > remainingMinutes) {
+        form.setError(fieldName, {
+          type: 'manual',
+          message: `Cannot add a ${lessonDurationMinutes} min lesson. Only ${Math.round(remainingMinutes)} min remaining in the contract.`
+        });
+        return;
+      }
+    }
 
     // Combine existing and new slot for overlap check
     const allSlotsForCheck = [...parsedExistingSlots, parsedNewSlot];
