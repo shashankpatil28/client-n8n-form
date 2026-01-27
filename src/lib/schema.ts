@@ -188,8 +188,8 @@ export const formSchema = z.object({
     // Use a small tolerance for floating point issues
     if (Math.abs(netTotal - paymentTotal) > 0.01) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['payments'],
+        code: z.ZodIssueCode.custom, // Use custom code for validation
+        path: ['payments', 0, 'amount'], // Attach error to the first payment's amount field
         message: `The sum of payments (${paymentTotal.toFixed(2)} CHF) must equal the final total (${netTotal.toFixed(2)} CHF).`,
       });
     }

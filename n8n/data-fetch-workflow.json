@@ -1,0 +1,126 @@
+{
+  "name": "Data_Fetch_API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "get-contracts",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 100],
+      "id": "get-contracts-webhook",
+      "name": "GET Contracts",
+      "webhookId": "get-contracts"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Contract_Details",
+          "mode": "list",
+          "cachedResultName": "Contract_Details"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [220, 100],
+      "id": "read-contracts-sheet",
+      "name": "Read Contracts Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 100],
+      "id": "respond-contracts",
+      "name": "Respond Contracts"
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "get-invoices",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 300],
+      "id": "get-invoices-webhook",
+      "name": "GET Invoices",
+      "webhookId": "get-invoices"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "1115376339",
+          "mode": "list",
+          "cachedResultName": "Invoices"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [220, 300],
+      "id": "read-invoices-sheet",
+      "name": "Read Invoices Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 300],
+      "id": "respond-invoices",
+      "name": "Respond Invoices"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "GET Contracts": {"main": [[{"node": "Read Contracts Sheet", "type": "main", "index": 0}]]},
+    "Read Contracts Sheet": {"main": [[{"node": "Respond Contracts", "type": "main", "index": 0}]]},
+    "GET Invoices": {"main": [[{"node": "Read Invoices Sheet", "type": "main", "index": 0}]]},
+    "Read Invoices Sheet": {"main": [[{"node": "Respond Invoices", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "data-fetch-v1",
+  "meta": {"templateCredsSetupCompleted": true},
+  "id": "DataFetchAPI",
+  "tags": []
+}

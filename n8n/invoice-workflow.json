@@ -1,0 +1,657 @@
+{
+  "name": "Invoice_Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "submit-invoice",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-48, 96],
+      "id": "webhook-invoice",
+      "name": "Webhook",
+      "webhookId": "submit-invoice-webhook"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "1115376339",
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit#gid=1115376339"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [176, 96],
+      "id": "get-invoices-sheet",
+      "name": "Get Invoices Sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "year",
+              "name": "year",
+              "value": "={{ new Date().getFullYear().toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "invoiceCount",
+              "name": "invoiceCount",
+              "value": "={{ Math.max(0, ...$('Get Invoices Sheet').all().filter(inv => (inv.json['Invoice Number'] || '').startsWith(new Date().getFullYear().toString())).map(inv => parseInt((inv.json['Invoice Number'] || '0').split('/').pop(), 10) || 0)) + 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "invoiceNumber",
+              "name": "invoiceNumber",
+              "value": "={{ new Date().getFullYear() + '/IN/' + (Math.max(0, ...$('Get Invoices Sheet').all().filter(inv => (inv.json['Invoice Number'] || '').startsWith(new Date().getFullYear().toString())).map(inv => parseInt((inv.json['Invoice Number'] || '0').split('/').pop(), 10) || 0)) + 1).toString().padStart(3, '0') }}",
+              "type": "string"
+            },
+            {
+              "id": "invoiceFilename",
+              "name": "invoiceFilename",
+              "value": "={{ new Date().getFullYear() + '-IN-' + (Math.max(0, ...$('Get Invoices Sheet').all().filter(inv => (inv.json['Invoice Number'] || '').startsWith(new Date().getFullYear().toString())).map(inv => parseInt((inv.json['Invoice Number'] || '0').split('/').pop(), 10) || 0)) + 1).toString().padStart(3, '0') }}",
+              "type": "string"
+            },
+            {
+              "id": "clientName",
+              "name": "clientName",
+              "value": "={{ $('Webhook').item.json.body.debtorName }}",
+              "type": "string"
+            },
+            {
+              "id": "clientEmail",
+              "name": "clientEmail",
+              "value": "={{ $('Webhook').item.json.body.debtorEmail || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "clientAddress",
+              "name": "clientAddress",
+              "value": "={{ $('Webhook').item.json.body.debtorStreet }} {{ $('Webhook').item.json.body.debtorHouse }}{{ $('Webhook').item.json.body.debtorApt ? ', Apt ' + $('Webhook').item.json.body.debtorApt : '' }}\\n{{ $('Webhook').item.json.body.debtorZip }} {{ $('Webhook').item.json.body.debtorCity }}\\n{{ $('Webhook').item.json.body.debtorCountry }}",
+              "type": "string"
+            },
+            {
+              "id": "itemsTable",
+              "name": "itemsTable",
+              "value": "={{ $('Webhook').item.json.body.items.map((item, i) => `${i+1}. ${item.name} - ${item.quantity} ${item.unit} x ${item.unitPrice} CHF = ${(item.quantity * item.unitPrice).toFixed(2)} CHF`).join('\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "itemsJson",
+              "name": "itemsJson",
+              "value": "={{ JSON.stringify($('Webhook').item.json.body.items) }}",
+              "type": "string"
+            },
+            {
+              "id": "subtotal",
+              "name": "subtotal",
+              "value": "={{ $('Webhook').item.json.body.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0).toFixed(2) }}",
+              "type": "string"
+            },
+            {
+              "id": "discount",
+              "name": "discount",
+              "value": "={{ $('Webhook').item.json.body.discount || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "total",
+              "name": "total",
+              "value": "={{ ($('Webhook').item.json.body.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) * (1 - (($('Webhook').item.json.body.discount || 0) / 100))).toFixed(2) }}",
+              "type": "string"
+            },
+            {
+              "id": "installmentsText",
+              "name": "installmentsText",
+              "value": "={{ ($('Webhook').item.json.body.installments || []).length > 0 ? $('Webhook').item.json.body.installments.map((inst, i) => `Rate ${i+1}: ${inst.date} - ${inst.amount} CHF`).join('\\n') : 'Gesamtbetrag fällig am Fälligkeitsdatum / Full amount due by due date' }}",
+              "type": "string"
+            },
+            {
+              "id": "installmentsJson",
+              "name": "installmentsJson",
+              "value": "={{ JSON.stringify($('Webhook').item.json.body.installments || []) }}",
+              "type": "string"
+            },
+            {
+              "id": "templateId",
+              "name": "templateId",
+              "value": "={{ $('Webhook').item.json.body.language === 'English' ? '1WRZwOpu9zA38a55v_jeIWbRl9Qj0Mztr54qcGY68HYY' : '1LVkJ26tY-gs0WYNHKavv4NBOoIdS_Uoeo6v8t_MYZgw' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 96],
+      "id": "generate-invoice-fields",
+      "name": "Generate Invoice Fields",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $json.year }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1FQwY9_0yaP920DFdoxiIdPzTKPIwHPwp",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [624, 96],
+      "id": "create-year-folder",
+      "name": "Create Year Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Generate Invoice Fields').item.json.templateId }}",
+          "mode": "id"
+        },
+        "name": "={{ $('Generate Invoice Fields').item.json.invoiceFilename }}",
+        "sameFolder": false,
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [848, 96],
+      "id": "copy-template",
+      "name": "Copy Template",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "{{invoiceNumber}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.invoiceNumber }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{issueDate}}",
+              "replaceText": "={{ $('Webhook').item.json.body.issueDate }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{dueDate}}",
+              "replaceText": "={{ $('Webhook').item.json.body.dueDate }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{clientName}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.clientName }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{clientAddress}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.clientAddress }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{contractNumber}}",
+              "replaceText": "={{ $('Webhook').item.json.body.contractNumber || 'N/A' }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{itemsTable}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.itemsTable }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{subtotal}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.subtotal }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{discount}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.discount.toString() }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{total}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.total }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{extraNote}}",
+              "replaceText": "={{ $('Webhook').item.json.body.extraNote || '' }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{paymentDetails}}",
+              "replaceText": "={{ $('Generate Invoice Fields').item.json.installmentsText }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [1072, 96],
+      "id": "update-invoice-doc",
+      "name": "Update Invoice Document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "y7xLIoo7rb8VkVvO",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.documentId }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1296, 96],
+      "id": "download-as-pdf",
+      "name": "Download as PDF",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Generate Invoice Fields').first().json.invoiceFilename }}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Create Year Folder').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1520, 96],
+      "id": "upload-pdf",
+      "name": "Upload PDF",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "1115376339",
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit#gid=1115376339"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Invoice Number": "={{ $('Generate Invoice Fields').item.json.invoiceNumber }}",
+            "Contract ID": "={{ $('Webhook').item.json.body.contractNumber || '' }}",
+            "Client Name": "={{ $('Generate Invoice Fields').item.json.clientName }}",
+            "Client Email": "={{ $('Generate Invoice Fields').item.json.clientEmail }}",
+            "Amount": "={{ $('Generate Invoice Fields').item.json.total }}",
+            "Currency": "CHF",
+            "Language": "={{ $('Webhook').item.json.body.language }}",
+            "Issue Date": "={{ $('Webhook').item.json.body.issueDate }}",
+            "Due Date": "={{ $('Webhook').item.json.body.dueDate }}",
+            "Status": "Unpaid",
+            "Drive PDF Link": "={{ 'https://drive.google.com/file/d/' + $json.id + '/view' }}",
+            "Items": "={{ $('Generate Invoice Fields').item.json.itemsTable }}",
+            "Items JSON": "={{ $('Generate Invoice Fields').item.json.itemsJson }}",
+            "Discount": "={{ $('Generate Invoice Fields').item.json.discount.toString() }}",
+            "Installments": "={{ $('Generate Invoice Fields').item.json.installmentsText }}",
+            "Installments JSON": "={{ $('Generate Invoice Fields').item.json.installmentsJson }}",
+            "Extra Note": "={{ $('Webhook').item.json.body.extraNote || '' }}",
+            "Created At": "={{ new Date().toISOString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {"id": "Invoice Number", "displayName": "Invoice Number", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Contract ID", "displayName": "Contract ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Client Name", "displayName": "Client Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Client Email", "displayName": "Client Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Amount", "displayName": "Amount", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Currency", "displayName": "Currency", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Language", "displayName": "Language", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Issue Date", "displayName": "Issue Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Due Date", "displayName": "Due Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Status", "displayName": "Status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Drive PDF Link", "displayName": "Drive PDF Link", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Items", "displayName": "Items", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Items JSON", "displayName": "Items JSON", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Discount", "displayName": "Discount", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Installments", "displayName": "Installments", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Installments JSON", "displayName": "Installments JSON", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Extra Note", "displayName": "Extra Note", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Created At", "displayName": "Created At", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true}
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1744, 96],
+      "id": "update-invoices-sheet",
+      "name": "Update Invoices Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Upload PDF').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1968, 96],
+      "id": "download-pdf-for-email",
+      "name": "Download PDF for Email",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $('Webhook').item.json.body.language === 'English' ? 'Invoice ' + $('Generate Invoice Fields').item.json.invoiceNumber + ' - Language School Zurich' : 'Rechnung ' + $('Generate Invoice Fields').item.json.invoiceNumber + ' - Sprachschule Zürich' }}",
+        "message": "={{ $('Webhook').item.json.body.language === 'English' ? 'Dear ' + $('Generate Invoice Fields').item.json.clientName + ',\\n\\nPlease find attached invoice ' + $('Generate Invoice Fields').item.json.invoiceNumber + ' for your language courses.\\n\\nInvoice Details:\\n- Issue Date: ' + $('Webhook').item.json.body.issueDate + '\\n- Due Date: ' + $('Webhook').item.json.body.dueDate + '\\n- Total Amount: ' + $('Generate Invoice Fields').item.json.total + ' CHF\\n\\n' + $('Generate Invoice Fields').item.json.installmentsText + '\\n\\nPlease remit payment by the due date.\\n\\nBest regards,\\nLanguage School Zurich' : 'Sehr geehrte/r ' + $('Generate Invoice Fields').item.json.clientName + ',\\n\\nanbei finden Sie die Rechnung ' + $('Generate Invoice Fields').item.json.invoiceNumber + ' für Ihre Sprachkurse.\\n\\nRechnungsdetails:\\n- Rechnungsdatum: ' + $('Webhook').item.json.body.issueDate + '\\n- Fälligkeitsdatum: ' + $('Webhook').item.json.body.dueDate + '\\n- Gesamtbetrag: ' + $('Generate Invoice Fields').item.json.total + ' CHF\\n\\n' + $('Generate Invoice Fields').item.json.installmentsText + '\\n\\nBitte überweisen Sie den Betrag bis zum Fälligkeitsdatum.\\n\\nMit freundlichen Grüßen,\\nSprachschule Zürich' }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [{"property": "data"}]
+          },
+          "sendTo": "={{ $('Generate Invoice Fields').item.json.clientEmail }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [2192, 96],
+      "id": "create-email-draft",
+      "name": "Create Email Draft",
+      "webhookId": "email-draft-invoice",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "IaE9VkkYZ2IYyPrD",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5872462022",
+        "text": "=✅ *New Invoice Generated!*\\n\\n📄 *Invoice:* {{ $('Generate Invoice Fields').item.json.invoiceNumber }}\\n👤 *Client:* {{ $('Generate Invoice Fields').item.json.clientName }}\\n📧 *Email:* {{ $('Generate Invoice Fields').item.json.clientEmail }}\\n💰 *Amount:* {{ $('Generate Invoice Fields').item.json.total }} CHF\\n📅 *Due Date:* {{ $('Webhook').item.json.body.dueDate }}\\n\\n*Status:*\\n✅ PDF Created & Saved to Drive\\n✅ Email Draft Ready in Gmail\\n✅ Sheet Updated\\n\\n*Action:* Check Gmail drafts and send!\\n\\nGood job! 🤖",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2416, 96],
+      "id": "notify-success",
+      "name": "Notify Success",
+      "webhookId": "telegram-notify-invoice",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [-48, 416],
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "webhookId": "telegram-trigger-invoice",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3},
+                "conditions": [{"leftValue": "={{ $json.message.text }}", "rightValue": "/invoice new", "operator": {"type": "string", "operation": "equals"}, "id": "invoice-new-cmd"}],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3},
+                "conditions": [{"leftValue": "={{ $json.message.text }}", "rightValue": "/invoice list", "operator": {"type": "string", "operation": "equals"}, "id": "invoice-list-cmd"}],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [176, 416],
+      "id": "switch-command",
+      "name": "Switch Command"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "📝 *New Invoice*\\n\\nPlease use the dashboard to create invoices:\\nhttps://n8n-form-freelance-gi8y.vercel.app/dashboard/invoices/new",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [400, 320],
+      "id": "send-dashboard-link",
+      "name": "Send Dashboard Link",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "1115376339",
+          "mode": "list",
+          "cachedResultName": "Invoices"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [400, 512],
+      "id": "get-recent-invoices",
+      "name": "Get Recent Invoices",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=📋 *Recent Invoices (Last 10)*\\n\\n{{ $('Get Recent Invoices').all().slice(-10).reverse().map((inv, i) => `${i+1}. *${inv.json['Invoice Number'] || 'N/A'}* - ${inv.json['Client Name'] || 'Unknown'} - ${inv.json['Amount'] || '0'} CHF - ${inv.json['Status'] || 'N/A'}`).join('\\n') || 'No invoices found.' }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [624, 512],
+      "id": "send-invoice-list",
+      "name": "Send Invoice List",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-48, 736],
+      "id": "error-trigger",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "5872462022",
+        "text": "=🚨 *Invoice Workflow Error!*\\n\\n*Error:* {{ $execution.error.message }}\\n*URL:* {{ $execution.url }}\\n\\nPlease check and retry.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [176, 736],
+      "id": "notify-error",
+      "name": "Notify Error",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {"main": [[{"node": "Get Invoices Sheet", "type": "main", "index": 0}]]},
+    "Get Invoices Sheet": {"main": [[{"node": "Generate Invoice Fields", "type": "main", "index": 0}]]},
+    "Generate Invoice Fields": {"main": [[{"node": "Create Year Folder", "type": "main", "index": 0}]]},
+    "Create Year Folder": {"main": [[{"node": "Copy Template", "type": "main", "index": 0}]]},
+    "Copy Template": {"main": [[{"node": "Update Invoice Document", "type": "main", "index": 0}]]},
+    "Update Invoice Document": {"main": [[{"node": "Download as PDF", "type": "main", "index": 0}]]},
+    "Download as PDF": {"main": [[{"node": "Upload PDF", "type": "main", "index": 0}]]},
+    "Upload PDF": {"main": [[{"node": "Update Invoices Sheet", "type": "main", "index": 0}]]},
+    "Update Invoices Sheet": {"main": [[{"node": "Download PDF for Email", "type": "main", "index": 0}]]},
+    "Download PDF for Email": {"main": [[{"node": "Create Email Draft", "type": "main", "index": 0}]]},
+    "Create Email Draft": {"main": [[{"node": "Notify Success", "type": "main", "index": 0}]]},
+    "Telegram Trigger": {"main": [[{"node": "Switch Command", "type": "main", "index": 0}]]},
+    "Switch Command": {"main": [[{"node": "Send Dashboard Link", "type": "main", "index": 0}], [{"node": "Get Recent Invoices", "type": "main", "index": 0}]]},
+    "Get Recent Invoices": {"main": [[{"node": "Send Invoice List", "type": "main", "index": 0}]]},
+    "Error Trigger": {"main": [[{"node": "Notify Error", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1", "availableInMCP": false},
+  "versionId": "invoice-workflow-v6-simplified",
+  "meta": {"templateCredsSetupCompleted": true, "instanceId": "a639eeaccec4035c591a784d6761619d0b9ff5e421b6a86b5d11932484744c91"},
+  "id": "InvoiceWorkflow",
+  "tags": []
+}
