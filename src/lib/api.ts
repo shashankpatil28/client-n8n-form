@@ -1,22 +1,19 @@
 import axios from "axios";
-import { mockContracts, mockInvoices, type Contract, type Invoice } from "./mockData";
+import { type Contract, type Invoice } from "./types";
 
 // API Configuration
-const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === "true";
-const API_BASE_URL = import.meta.env.VITE_N8N_API_BASE_URL || "";
+const IS_DEV = import.meta.env.DEV;
+
+// In development, use the Vite proxy to avoid CORS issues
+// The proxy is configured in vite.config.ts to forward /api/n8n/* to the actual n8n URL
+const API_BASE_URL = IS_DEV
+  ? "/api/n8n"  // Use Vite proxy in development
+  : (import.meta.env.VITE_N8N_API_BASE_URL || "");
 
 // Contracts API
 export async function fetchContracts(): Promise<Contract[]> {
-  // Only use mock data if explicitly set to true
-  if (USE_MOCK_DATA) {
-    console.log("Using mock contracts data (VITE_USE_MOCK_DATA=true)");
-    return mockContracts;
-  }
-
-  // If API URL is not set, use mock data with warning
   if (!API_BASE_URL) {
-    console.warn("VITE_N8N_API_BASE_URL not set - using mock data");
-    return mockContracts;
+    throw new Error("VITE_N8N_API_BASE_URL is not configured. Please set it in your .env file.");
   }
 
   try {
@@ -25,25 +22,33 @@ export async function fetchContracts(): Promise<Contract[]> {
 
     // Check if response is valid
     if (!response.data || !Array.isArray(response.data)) {
-      console.warn("Invalid response from API - using mock data");
-      return mockContracts;
+      throw new Error("Invalid response from API - expected an array of contracts");
     }
 
     // Transform the response to match our Contract interface
-    const contracts = response.data.map((row: any) => ({
-      id: row["Contract Number"] || row.contractNumber || row.id,
-      contractNumber: row["Contract Number"] || row.contractNumber,
+    // Note: API returns fields with specific naming (some with leading/trailing spaces)
+    const contracts: Contract[] = response.data.map((row: any) => ({
+      id: row["Contract No"] || row["Contract Number"] || row.contractNumber || row.id,
+      contractNumber: row["Contract No"] || row["Contract Number"] || row.contractNumber,
       contractDate: row["Contract Date"] || row.contractDate,
-      clientName: row["Client Name"] || row.clientName,
-      email: row["Email"] || row.email,
-      phone: row["Phone"] || row.phone,
-      clientType: (row["Client Type"] || row.clientType || "private").toLowerCase(),
-      companyName: row["Company Name"] || row.companyName,
+      clientNo: row["Client No"] || row.clientNo,
+      clientName: row["Client Name"] || row.clientName || `Client ${row["Client No"] || ""}`,
+      email: row["Email"] || row.email || "",
+      phone: row["Phone"] || row.phone || "",
+      clientType: (row["Client Type"] || row.clientType || "private").toLowerCase() as "private" | "business",
+      companyName: row["Company Name"] || row.companyName || "",
       program: row["Program"] || row.program || "Private tuition",
       courseLang: row["Course Language"] || row.courseLang || "German",
-      totalAmount: parseFloat(row["Total Amount"] || row.totalAmount || 0),
-      status: (row["Status"] || row.status || "pending").toLowerCase(),
-      createdAt: row["Created At"] || row.createdAt || new Date().toISOString(),
+      startDate: row[" Start Date"] || row["Start Date"] || row.startDate || "",
+      validUntil: row["Valid Until"] || row.validUntil || "",
+      courseEndDate: row["Course End Date "] || row["Course End Date"] || row.courseEndDate || "",
+      totalHours: parseFloat(row["Total Hours"] || row.totalHours || 0),
+      totalAmount: parseFloat(row["Total Value"] || row["Total Amount"] || row.totalAmount || 0),
+      discount: parseFloat(row["Discounts"] || row["Discount"] || row.discount || 0),
+      paymentSchedule: row["Full Payment Schedule"] || row.paymentSchedule || "",
+      lessonPackages: row["Lesson Packages"] || row.lessonPackages || "",
+      status: ((row["Status"] || row.status || "").toLowerCase() || "pending") as Contract["status"],
+      createdAt: row["Created At"] || row["Contract Date"] || row.createdAt || new Date().toISOString(),
       pdfLink: row["Drive PDF Link"] || row.pdfLink || "",
     }));
 
@@ -51,23 +56,14 @@ export async function fetchContracts(): Promise<Contract[]> {
     return contracts;
   } catch (error: any) {
     console.error("Error fetching contracts:", error.message || error);
-    // Re-throw the error so the component can handle it
     throw new Error(`Failed to fetch contracts: ${error.message || 'Network error'}`);
   }
 }
 
 // Invoices API
 export async function fetchInvoices(): Promise<Invoice[]> {
-  // Only use mock data if explicitly set to true
-  if (USE_MOCK_DATA) {
-    console.log("Using mock invoices data (VITE_USE_MOCK_DATA=true)");
-    return mockInvoices;
-  }
-
-  // If API URL is not set, use mock data with warning
   if (!API_BASE_URL) {
-    console.warn("VITE_N8N_API_BASE_URL not set - using mock data");
-    return mockInvoices;
+    throw new Error("VITE_N8N_API_BASE_URL is not configured. Please set it in your .env file.");
   }
 
   try {
@@ -76,20 +72,19 @@ export async function fetchInvoices(): Promise<Invoice[]> {
 
     // Check if response is valid
     if (!response.data || !Array.isArray(response.data)) {
-      console.warn("Invalid response from API - using mock data");
-      return mockInvoices;
+      throw new Error("Invalid response from API - expected an array of invoices");
     }
 
     // Transform the response to match our Invoice interface
-    const invoices = response.data.map((row: any) => ({
+    const invoices: Invoice[] = response.data.map((row: any) => ({
       id: row["Invoice Number"] || row.invoiceNumber || row.id,
       invoiceNumber: row["Invoice Number"] || row.invoiceNumber,
       contractId: row["Contract ID"] || row.contractId || "",
       clientName: row["Client Name"] || row.clientName,
       clientEmail: row["Client Email"] || row.clientEmail || "",
-      language: (row["Language"] || row.language || "EN") === "English" ? "EN" :
+      language: ((row["Language"] || row.language || "EN") === "English" ? "EN" :
                 (row["Language"] || row.language || "EN") === "German" ? "DE" :
-                (row["Language"] || row.language || "EN"),
+                (row["Language"] || row.language || "EN")) as "EN" | "DE",
       issueDate: row["Issue Date"] || row.issueDate,
       dueDate: row["Due Date"] || row.dueDate,
       amount: parseFloat(row["Amount"] || row.amount || 0),
@@ -102,7 +97,6 @@ export async function fetchInvoices(): Promise<Invoice[]> {
     return invoices;
   } catch (error: any) {
     console.error("Error fetching invoices:", error.message || error);
-    // Re-throw the error so the component can handle it
     throw new Error(`Failed to fetch invoices: ${error.message || 'Network error'}`);
   }
 }

@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { invoiceFormSchema, type InvoiceFormData } from "@/lib/invoiceSchema";
-import { mockContracts } from "@/lib/mockData";
+import { fetchContracts } from "@/lib/api";
+import { type Contract } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 // UI Components
@@ -40,11 +41,34 @@ export default function NewInvoiceForm() {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [isLoadingContracts, setIsLoadingContracts] = useState(true);
+
+  // Fetch contracts on mount
+  useEffect(() => {
+    const loadContracts = async () => {
+      setIsLoadingContracts(true);
+      try {
+        const data = await fetchContracts();
+        setContracts(data);
+      } catch (err) {
+        console.error("Failed to load contracts:", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load contracts. Using offline mode.",
+        });
+      } finally {
+        setIsLoadingContracts(false);
+      }
+    };
+    loadContracts();
+  }, [toast]);
 
   const contractId = searchParams.get("contractId");
   const selectedContract = useMemo(
-    () => mockContracts.find((c) => c.id === contractId),
-    [contractId]
+    () => contracts.find((c) => c.id === contractId),
+    [contractId, contracts]
   );
 
   const countries = useMemo(() => countryList().getData(), []);
@@ -153,7 +177,7 @@ export default function NewInvoiceForm() {
       let debtorCountry = "";
 
       if (data.debtorType === "existing" && data.existingClientId) {
-        const client = mockContracts.find((c) => c.id === data.existingClientId);
+        const client = contracts.find((c) => c.id === data.existingClientId);
         if (client) {
           debtorName = client.clientName;
           debtorEmail = client.email;
@@ -236,7 +260,7 @@ export default function NewInvoiceForm() {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold">Create Invoice</h1>
         <p className="text-muted-foreground text-sm mt-1">
@@ -324,16 +348,23 @@ export default function NewInvoiceForm() {
                     <Select
                       value={form.watch("existingClientId")}
                       onValueChange={(value) => form.setValue("existingClientId", value)}
+                      disabled={isLoadingContracts}
                     >
                       <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Choose a client..." />
+                        <SelectValue placeholder={isLoadingContracts ? "Loading contracts..." : "Choose a client..."} />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockContracts.map((contract) => (
-                          <SelectItem key={contract.id} value={contract.id}>
-                            {contract.contractNumber} - {contract.clientName}
-                          </SelectItem>
-                        ))}
+                        {isLoadingContracts ? (
+                          <SelectItem value="_loading" disabled>Loading contracts...</SelectItem>
+                        ) : contracts.length === 0 ? (
+                          <SelectItem value="_empty" disabled>No contracts available</SelectItem>
+                        ) : (
+                          contracts.map((contract) => (
+                            <SelectItem key={contract.id} value={contract.id}>
+                              {contract.contractNumber} - {contract.clientName}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     {form.formState.errors.existingClientId && (
@@ -705,7 +736,7 @@ export default function NewInvoiceForm() {
                     {debtorType === "existing" && form.watch("existingClientId") && (
                       <p>
                         <span className="font-semibold">Client:</span>{" "}
-                        {mockContracts.find((c) => c.id === form.watch("existingClientId"))?.clientName}
+                        {contracts.find((c) => c.id === form.watch("existingClientId"))?.clientName}
                       </p>
                     )}
                     {debtorType === "custom" && (

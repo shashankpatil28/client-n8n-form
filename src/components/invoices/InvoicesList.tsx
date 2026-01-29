@@ -1,12 +1,13 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { type Invoice } from "@/lib/mockData";
+import { type Invoice } from "@/lib/types";
 import { fetchInvoices } from "@/lib/api";
+import { usePolling, formatLastUpdated } from "@/hooks/usePolling";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Search, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const statusColors = {
@@ -18,29 +19,20 @@ const statusColors = {
 export default function InvoicesList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadInvoices = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await fetchInvoices();
-        setInvoices(data);
-      } catch (err: any) {
-        console.error("Failed to load invoices:", err);
-        setError(err.message || "Failed to load invoices");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadInvoices();
-  }, []);
+  // Use polling hook for automatic data refresh (default: 5 minutes)
+  const {
+    data: invoices,
+    isLoading,
+    isRefreshing,
+    error,
+    lastUpdated,
+    refresh,
+  } = usePolling<Invoice[]>(fetchInvoices);
 
   // Sort by latest first (issueDate desc)
   const sortedInvoices = useMemo(() => {
+    if (!invoices) return [];
     return [...invoices].sort((a, b) =>
       new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()
     );
@@ -72,10 +64,29 @@ export default function InvoicesList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Invoices</CardTitle>
-          <CardDescription>
-            {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Invoices</CardTitle>
+              <CardDescription>
+                {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}
+                {lastUpdated && (
+                  <span className="ml-2 text-xs">
+                    (Updated {formatLastUpdated(lastUpdated)})
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Search */}
