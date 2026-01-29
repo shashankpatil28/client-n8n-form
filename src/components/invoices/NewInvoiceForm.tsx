@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,28 +42,27 @@ export default function NewInvoiceForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [isLoadingContracts, setIsLoadingContracts] = useState(true);
+  const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
-  // Fetch contracts on mount
-  useEffect(() => {
-    const loadContracts = async () => {
-      setIsLoadingContracts(true);
-      try {
-        const data = await fetchContracts();
-        setContracts(data);
-      } catch (err) {
-        console.error("Failed to load contracts:", err);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load contracts. Using offline mode.",
-        });
-      } finally {
-        setIsLoadingContracts(false);
-      }
-    };
-    loadContracts();
-  }, [toast]);
+  const loadContracts = useCallback(async () => {
+    if (contracts.length > 0 || isLoadingContracts) {
+      return;
+    }
+    setIsLoadingContracts(true);
+    try {
+      const data = await fetchContracts();
+      setContracts(data);
+    } catch (err) {
+      console.error("Failed to load contracts:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load contracts. Using offline mode.",
+      });
+    } finally {
+      setIsLoadingContracts(false);
+    }
+  }, [contracts.length, isLoadingContracts, toast]);
 
   const contractId = searchParams.get("contractId");
   const selectedContract = useMemo(
@@ -348,7 +347,11 @@ export default function NewInvoiceForm() {
                     <Select
                       value={form.watch("existingClientId")}
                       onValueChange={(value) => form.setValue("existingClientId", value)}
-                      disabled={isLoadingContracts}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          loadContracts();
+                        }
+                      }}
                     >
                       <SelectTrigger className="h-12">
                         <SelectValue placeholder={isLoadingContracts ? "Loading contracts..." : "Choose a client..."} />
