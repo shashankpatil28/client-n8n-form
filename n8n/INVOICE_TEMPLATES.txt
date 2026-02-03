@@ -1,0 +1,179 @@
+================================================================================
+                        INVOICE TEMPLATES FOR GOOGLE DOCS
+================================================================================
+
+Copy each template below into a separate Google Doc.
+Make sure to keep the {{placeholder}} format exactly as shown.
+
+================================================================================
+                           TEMPLATE 1: ENGLISH
+================================================================================
+Document Name: Invoice_English
+================================================================================
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                                   INVOICE
+═══════════════════════════════════════════════════════════════════════════════
+
+Language School Zurich
+Bahnhofstrasse 1
+8001 Zurich, Switzerland
+Email: info@languageschool.ch
+Phone: +41 44 123 45 67
+
+───────────────────────────────────────────────────────────────────────────────
+
+INVOICE TO:                                    INVOICE DETAILS:
+
+{{clientName}}                                 Invoice No: {{invoiceNumber}}
+{{clientAddress}}                              Issue Date: {{issueDate}}
+                                               Due Date: {{dueDate}}
+                                               Contract: {{contractNumber}}
+
+═══════════════════════════════════════════════════════════════════════════════
+                               INVOICE ITEMS
+═══════════════════════════════════════════════════════════════════════════════
+
+{{itemsTable}}
+
+───────────────────────────────────────────────────────────────────────────────
+                                               Subtotal: {{subtotal}} CHF
+                                               Discount: {{discount}}%
+                                               ─────────────────────────────────
+                                               TOTAL: {{total}} CHF
+═══════════════════════════════════════════════════════════════════════════════
+
+PAYMENT DETAILS:
+
+{{paymentDetails}}
+
+───────────────────────────────────────────────────────────────────────────────
+
+Bank Details:
+Bank: UBS Switzerland AG
+IBAN: CH00 0000 0000 0000 0000 0
+BIC: UBSWCHZH80A
+Account Holder: Language School Zurich AG
+
+───────────────────────────────────────────────────────────────────────────────
+
+{{extraNote}}
+
+───────────────────────────────────────────────────────────────────────────────
+                         Thank you for your business!
+───────────────────────────────────────────────────────────────────────────────
+
+
+
+
+================================================================================
+                           TEMPLATE 2: GERMAN
+================================================================================
+Document Name: Invoice_German
+================================================================================
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                                   RECHNUNG
+═══════════════════════════════════════════════════════════════════════════════
+
+Sprachschule Zürich
+Bahnhofstrasse 1
+8001 Zürich, Schweiz
+E-Mail: info@sprachschule.ch
+Telefon: +41 44 123 45 67
+
+───────────────────────────────────────────────────────────────────────────────
+
+RECHNUNGSEMPFÄNGER:                            RECHNUNGSDETAILS:
+
+{{clientName}}                                 Rechnungs-Nr: {{invoiceNumber}}
+{{clientAddress}}                              Rechnungsdatum: {{issueDate}}
+                                               Fälligkeitsdatum: {{dueDate}}
+                                               Vertrag: {{contractNumber}}
+
+═══════════════════════════════════════════════════════════════════════════════
+                            RECHNUNGSPOSITIONEN
+═══════════════════════════════════════════════════════════════════════════════
+
+{{itemsTable}}
+
+───────────────────────────────────────────────────────────────────────────────
+                                               Zwischensumme: {{subtotal}} CHF
+                                               Rabatt: {{discount}}%
+                                               ─────────────────────────────────
+                                               GESAMT: {{total}} CHF
+═══════════════════════════════════════════════════════════════════════════════
+
+ZAHLUNGSDETAILS:
+
+{{paymentDetails}}
+
+───────────────────────────────────────────────────────────────────────────────
+
+Bankverbindung:
+Bank: UBS Switzerland AG
+IBAN: CH00 0000 0000 0000 0000 0
+BIC: UBSWCHZH80A
+Kontoinhaber: Sprachschule Zürich AG
+
+───────────────────────────────────────────────────────────────────────────────
+
+{{extraNote}}
+
+───────────────────────────────────────────────────────────────────────────────
+                       Vielen Dank für Ihr Vertrauen!
+───────────────────────────────────────────────────────────────────────────────
+
+
+
+
+================================================================================
+                            PLACEHOLDER REFERENCE
+================================================================================
+
+| Placeholder        | Example Value                                          |
+|--------------------|--------------------------------------------------------|
+| {{invoiceNumber}}  | 2026/IN/001                                            |
+| {{issueDate}}      | 2026-01-27                                             |
+| {{dueDate}}        | 2026-02-03                                             |
+| {{clientName}}     | John Doe                                               |
+| {{clientAddress}}  | 123 Main St 5A                                         |
+|                    | 8001 Zurich                                            |
+|                    | Switzerland                                            |
+| {{contractNumber}} | 20260120P001 (or N/A if not linked)                    |
+| {{itemsTable}}     | 1. German Lessons - 10 hrs x 50 CHF = 500.00 CHF       |
+|                    | 2. Materials - 1 qty x 45 CHF = 45.00 CHF              |
+| {{subtotal}}       | 545.00                                                 |
+| {{discount}}       | 10                                                     |
+| {{total}}          | 490.50                                                 |
+| {{paymentDetails}} | Rate 1: 2026-02-01 - 245.25 CHF                        |
+|                    | Rate 2: 2026-03-01 - 245.25 CHF                        |
+| {{extraNote}}      | Thank you for choosing our language school!            |
+
+================================================================================
+                              SETUP INSTRUCTIONS
+================================================================================
+
+1. Create two Google Docs in your Templates folder:
+   - Invoice_English
+   - Invoice_German
+
+2. Copy the content from TEMPLATE 1 into Invoice_English
+
+3. Copy the content from TEMPLATE 2 into Invoice_German
+
+4. Make sure all {{placeholders}} are copied exactly (including the curly braces)
+
+5. Update the bank details with your actual bank information
+
+6. Note the Document IDs from the URLs:
+   - English: https://docs.google.com/document/d/YOUR_ENGLISH_ID/edit
+   - German: https://docs.google.com/document/d/YOUR_GERMAN_ID/edit
+
+7. These IDs are already configured in the workflow:
+   - English: 1WRZwOpu9zA38a55v_jeIWbRl9Qj0Mztr54qcGY68HYY
+   - German: 1LVkJ26tY-gs0WYNHKavv4NBOoIdS_Uoeo6v8t_MYZgw
+
+================================================================================

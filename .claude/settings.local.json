@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(pnpm:*)",
+      "Bash(yarn:*)",
+      "Bash(node:*)",
+      "Bash(tsc:*)",
+      "Bash(vite:*)",
+      "Bash(next:*)",
+      "Bash(npm run:*)",
+      "Bash(pnpm run:*)",
+      "Bash(yarn run:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run start:*)",
+      "Bash(npm run lint:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(touch:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(echo:*)",
+      "Bash(git:*)",
+      "Bash(env:*)",
+      "Bash(export:*)",
+      "Bash(printenv:*)",
+      "Bash(./node_modules/.bin/*)",
+      "Bash(grep:*)",
+      "Bash(npm install)",
+      "Bash(curl:*)"
+    ]
+  }
+}
