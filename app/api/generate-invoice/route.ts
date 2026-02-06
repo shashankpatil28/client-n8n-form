@@ -20,8 +20,10 @@ export async function POST(request: NextRequest) {
     const pdfBuffer = await generateInvoicePDF(invoiceData);
     console.log(`PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
+    // Convert Buffer → Uint8Array (compatible with NextResponse)
+    const pdfBytes = new Uint8Array(pdfBuffer);
     // Return PDF as buffer
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
@@ -87,7 +89,10 @@ export async function GET() {
     console.log('Generating sample invoice PDF...');
     const pdfBuffer = await generateInvoicePDF(sampleData);
 
-    return new NextResponse(pdfBuffer, {
+    // Convert Buffer → Uint8Array (compatible with NextResponse)
+    const pdfBytes = new Uint8Array(pdfBuffer);
+    
+    return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
