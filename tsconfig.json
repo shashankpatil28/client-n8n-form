@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./app/src/*"],
+      "@/pdf/*": ["./app/lib/*", "./app/templates/*"]
     }
   },
   "include": [
@@ -30,5 +31,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "app/src/App.tsx",
+    "app/src/main.tsx",
+    "app/src/components/layout",
+    "app/src/pages"
+  ]
 }

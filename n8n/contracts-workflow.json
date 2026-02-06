@@ -1,0 +1,1392 @@
+{
+  "name": "final_workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 936006254,
+          "mode": "list",
+          "cachedResultName": "Contract_Details",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit#gid=936006254"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        96
+      ],
+      "id": "4fd44ffd-0947-462b-a653-a2e3d80bc1c3",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fd91c50a-4a2a-45b5-8386-0a26a753066a",
+              "name": "clientCount",
+              "value": "={{ Math.max(0, ...$('Get row(s) in sheet').all().map(item => parseInt(item.json[\"Client No\"] || 0))) + 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "c863ae6c-d815-44f6-9d76-cc0c27707968",
+              "name": "clientID",
+              "value": "={{ (Math.max(0, ...$('Get row(s) in sheet').all().map(item => parseInt(item.json[\"Client No\"] || 0))) + 1).toString().padStart(3, '0') }}",
+              "type": "string"
+            },
+            {
+              "id": "a44acddd-3a05-4ba5-92f3-652919e90822",
+              "name": "dateCode",
+              "value": "={{ $('Webhook').item.json.body.body.contractDate }}",
+              "type": "string"
+            },
+            {
+              "id": "56b5e51f-b18e-47f2-b093-1c3ccf2371dc",
+              "name": "typeCode",
+              "value": "={{ $('Webhook').item.json.body.clientType == \"private\" ? \"P\" : \"B\" }}",
+              "type": "string"
+            },
+            {
+              "id": "9383c626-3ff1-4f81-a610-ee2471cccf74",
+              "name": "contractId",
+              "value": "={{ $('Webhook').item.json.body.body.contractDate.replace(/-/g, '') }}{{ $('Webhook').item.json.body.clientType == \"private\" ? \"P\" : \"B\" }}{{ ($input.all().length + 1).toString().padStart(3, '0') }}",
+              "type": "string"
+            },
+            {
+              "id": "4d9f8489-eb51-4ddb-b59d-04e37802eed7",
+              "name": "pay1Amount",
+              "value": "={{ (Number($('Webhook').item.json.body.totalHours) || 0) * (Number($('Webhook').item.json.body.pricePerHour) || 0) * (1 - ((Number($('Webhook').item.json.body.discount) || 0) / 100)) }}",
+              "type": "number"
+            },
+            {
+              "id": "d27ba846-c359-460a-bbf2-212309c79138",
+              "name": "paymentScheduleString",
+              "value": "={{ $('Webhook').item.json.body.body.paymentPlanString }}",
+              "type": "string"
+            },
+            {
+              "id": "aa1a0f88-1d76-4f72-9442-a6cc64f3acb5",
+              "name": "TotalPrice",
+              "value": "={{ $('Webhook').item.json.body.body.calculatedTotalValue.toString()}}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        96
+      ],
+      "id": "41dddbc2-8ece-41be-9640-46cd74a1ee67",
+      "name": "Edit Fields",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Webhook').item.json.body.body.firstName }}  {{ $('Webhook').item.json.body.body.lastName }}({{ $('Webhook').item.json.body.body.email }})",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1dFOgYd7C1pwlo-i5TOsK2MhSxCh05QGA",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        672,
+        96
+      ],
+      "id": "7426ee73-6b37-4f28-a746-262d62420d18",
+      "name": "Create folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6471dd26-1f68-4510-a4df-c8bf1508803f",
+              "name": "templateId",
+              "value": "={{ $('Webhook').item.json.body.body.language == 'English' ? '1LsNplry65SyU87G1mE8JTVyKC9aiOqFoscX2khNfmSU' : '1TsJN4u-6xGAs8nOMZgqrMqGAaQuqZry-IfkOjdDVLeA' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        96
+      ],
+      "id": "31e91f51-0bef-466f-975c-44619c761e5d",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.templateId }}",
+          "mode": "id"
+        },
+        "name": "={{ $('Edit Fields').item.json.contractId}}",
+        "sameFolder": false,
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Create folder').first().json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "b66ec000-62fd-4a9e-9f38-3994878a7dde",
+      "name": "Copy file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "{{firstName}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.firstName }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{lastName}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.lastName }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{contractDate}} ",
+              "replaceText": "={{ $('Webhook').item.json.body.body.contractDate }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{address}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.addrStreet }} {{ $('Webhook').item.json.body.body.addrHouse }}{{ $('Webhook').item.json.body.body.addrApt ? ', Apt ' + $('Webhook').item.json.body.body.addrApt : '' }}\n{{ $('Webhook').item.json.body.body.addrZip }} {{ $('Webhook').item.json.body.body.addrCity }}\n{{ $('Webhook').item.json.body.body.addrState }}, {{ $('Webhook').item.json.body.body.addrCountry }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": " {{phone}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.phone }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{email}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.email }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{program}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.program }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{courseLang}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.courseLang }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": " {{level}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.level }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{lessonType}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.lessons[0].type }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{scheduleText}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.lessons[0].schedule }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{courseStart}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.courseStart }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": " {{courseEnd}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.courseEnd }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": " {{totalHours}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.totalHours.toString() }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": " {{discount}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.discount.toString() }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{calculatedTotalValue}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.calculatedTotalValue.toString() }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{validUntil}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.validUntil }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{contractDate}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.contractDate }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{pricePerHour}} ",
+              "replaceText": "={{ $('Webhook').item.json.body.body.lessons[0].pricePerHour.toString() }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": " {{companyName}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.companyName }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{companyAddress}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.compStreet }} {{ $('Webhook').item.json.body.body.compHouse }}{{ $('Webhook').item.json.body.body.compApt ? ', Apt ' + $('Webhook').item.json.body.body.compApt : '' }}\n{{ $('Webhook').item.json.body.body.compZip }} {{ $('Webhook').item.json.body.body.compCity }}\n{{ $('Webhook').item.json.body.body.compState }}, {{ $('Webhook').item.json.body.body.compCountry }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{paymentPlanString}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.paymentPlanString.replace(/;/g, '\\n') }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{hoursPerLesson}}",
+              "replaceText": "={{ $('Webhook').item.json.body.body.lessons[0].format }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "10c36aae-885f-4793-ac6d-3b4127fbc070",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "y7xLIoo7rb8VkVvO",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.documentId }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1568,
+        96
+      ],
+      "id": "c4991a8f-4465-4b90-b02b-2c55e0a18ea5",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Edit Fields').first().json.contractId }}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Create folder').first().json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1792,
+        96
+      ],
+      "id": "83644bed-d262-4388-ab9d-0540260fa8bd",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Client_Info",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Client No": "={{ $('Edit Fields').item.json.clientID }}",
+            "First Name": "={{ $('Webhook').item.json.body.body.firstName }}",
+            "Last Name": "=\n{{ $('Webhook').item.json.body.body.lastName }}",
+            "Phone": "={{ $('Webhook').item.json.body.body.phone }}",
+            "Address": "={{ $('Webhook').item.json.body.body.addrStreet }} {{ $('Webhook').item.json.body.body.addrHouse }}{{ $('Webhook').item.json.body.body.addrApt ? ', Apt ' + $('Webhook').item.json.body.body.addrApt : '' }}\n{{ $('Webhook').item.json.body.body.addrZip }} {{ $('Webhook').item.json.body.body.addrCity }}\n{{ $('Webhook').item.json.body.body.addrState }}, {{ $('Webhook').item.json.body.body.addrCountry }}",
+            "Source": "={{ $('Webhook').item.json.body.body.source }}",
+            "Language": "={{ $('Webhook').item.json.body.body.language }}",
+            "Contract ID": "={{ $('Edit Fields').item.json.contractId }}",
+            "Date": "={{ $('Webhook').item.json.body.body.contractDate }}",
+            "Email": "={{ $('Webhook').item.json.body.body.email }}",
+            "Company Name": "={{ $('Webhook').item.json.body.body.companyName }}",
+            "Company Address": "={{ $('Webhook').item.json.body.body.compStreet }} {{ $('Webhook').item.json.body.body.compHouse }}{{ $('Webhook').item.json.body.body.compApt ? ', Apt ' + $('Webhook').item.json.body.body.compApt : '' }} {{ $('Webhook').item.json.body.body.compZip }} {{ $('Webhook').item.json.body.body.compCity }} {{ $('Webhook').item.json.body.body.compState }}, {{ $('Webhook').item.json.body.body.compCountry }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Client No",
+              "displayName": "Client No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contract ID",
+              "displayName": "Contract ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company Address",
+              "displayName": "Company Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        96
+      ],
+      "id": "4c0f75bb-0d64-4389-aba2-1447d50a8580",
+      "name": "Update Client Info",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c",
+          "mode": "list",
+          "cachedResultName": "Master_CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 936006254,
+          "mode": "list",
+          "cachedResultName": "Contract_Details",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rs2WqYCaB1Zl_LGAAOzx7lqoQAvP07IPSkJZsxNBT1c/edit#gid=936006254"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Full Payment Schedule": "={{ $('Webhook').item.json.body.body.paymentPlanString }}",
+            "Discounts": "={{ $('Webhook').item.json.body.body.discount }}",
+            "Valid Until": "={{ $('Webhook').item.json.body.body.validUntil }}",
+            "Course End Date ": "={{ $('Webhook').item.json.body.body.courseEnd }}",
+            "Contract Date": "={{ $('Webhook').item.json.body.body.contractDate }}",
+            "Contract No": "={{ $('Edit Fields').item.json.contractId }}",
+            "Client No": "={{ $('Edit Fields').item.json.clientID }}",
+            "Program": "={{ $('Webhook').item.json.body.body.program }}",
+            " Start Date": "={{ $('Webhook').item.json.body.body.courseStart }}",
+            "Total Hours": "={{ $('Webhook').item.json.body.body.lessons[0].totalHours }}",
+            "Total Value": "={{ $('Webhook').item.json.body.body.calculatedTotalValue }}",
+            "Lesson Packages": "={{ $('Webhook').item.json.body.body.lessons.map(l => \n   `${l.totalHours}h - ${l.type} ; ${l.format} min ; ${l.pricePerHour}CHF ; ${l.schedule}`\n   ).join('\\n') \n}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Contract No",
+              "displayName": "Contract No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Client No",
+              "displayName": "Client No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contract Date",
+              "displayName": "Contract Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Program",
+              "displayName": "Program",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": " Start Date",
+              "displayName": " Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Valid Until",
+              "displayName": "Valid Until",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Course End Date ",
+              "displayName": "Course End Date ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Hours",
+              "displayName": "Total Hours",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Value",
+              "displayName": "Total Value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Full Payment Schedule",
+              "displayName": "Full Payment Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Discounts",
+              "displayName": "Discounts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lesson Packages",
+              "displayName": "Lesson Packages",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2240,
+        96
+      ],
+      "id": "1b1e8baf-490b-4f73-812c-346c710424ac",
+      "name": "Update Contract Details",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SbCEsCdKMFRXX3x2",
+          "name": "n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Upload file').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2464,
+        96
+      ],
+      "id": "bf4597c4-9ef8-4db8-871e-7687b625342b",
+      "name": "Download PDF",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Edit Fields').item.json.contractId }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "=1JNg4lqD6Q4v0CtCBMOVzmrX8aJvB1_yY",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2688,
+        0
+      ],
+      "id": "84a7763c-fc22-4f6c-904b-9013f3565f0c",
+      "name": "Save PDF to Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wNUZ08Vqk1Jfkjgm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Contract Confirmation:{{ $('Webhook').item.json.body.body.program }} - {{ $('Webhook').item.json.body.body.firstName }}{{ $('Webhook').item.json.body.body.lastName }}",
+        "message": "=Dear {{ $('Webhook').item.json.body.body.firstName }} {{ $('Webhook').item.json.body.body.lastName }},\n\nThank you for choosing our language school for your.\n\nWe are pleased to confirm your enrollment in the{{ $('Webhook').item.json.body.body.program }} {{ $('Webhook').item.json.body.body.courseLang }} course (Level {{ $('Webhook').item.json.body.body.level }}). Based on our discussion, we have prepared your contract with the following details:\n\n--- Course Summary ---\n• Schedule: {{ $('Webhook').item.json.body.body.scheduleText }}\n• Duration: {{ $('Webhook').item.json.body.body.courseStart }} to {{ $('Webhook').item.json.body.body.courseEnd }}\n• Total Hours: {{ $('Webhook').item.json.body.body.totalHours }}\n• Lesson Format:{{ $('Webhook').item.json.body.body.lessonType }} ( {{ $('Webhook').item.json.body.body.hoursPerLesson }}min/session)\n\n--- Financial Details ---\n• Hourly Rate: {{ $('Webhook').item.json.body.body.lessons[0].pricePerHour }} CHF\n• Applied Discount:{{ $('Webhook').item.json.body.body.discount }}%\n• Final Total Price: {{ $('Webhook').item.json.body.body.calculatedTotalValue }}CHF\n\nPlease find the official contract attached to this email. We kindly request that you sign and return the document by {{ $('Webhook').item.json.body.body.validUntil }} to secure your slot.\n\nIf you have any questions regarding the schedule or payment plan, feel free to reply directly to this email.\n\nBest regards,\n\nAdmissions Team\nLanguage School Zurich",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          },
+          "sendTo": "={{ $('Webhook').item.json.body.body.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2688,
+        192
+      ],
+      "id": "a8579845-936a-4b56-b724-633464a9b52a",
+      "name": "Create a draft",
+      "webhookId": "1de1f7a0-caf7-4b35-951e-1173af516552",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "IaE9VkkYZ2IYyPrD",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5872462022",
+        "text": "=🚀 *New Contract Generated Successfully*\n\n*Client Details:*\n👤 *Name:* {{ $('Webhook').item.json.body.body.firstName }} {{ $('Webhook').item.json.body.body.lastName }}\n📧 *Email:* {{ $('Webhook').item.json.body.body.email }}\n🏢 *Type:* {{ $('Webhook').item.json.body.body.clientType }}\n\n*Project Info:*\n📚 *Course:* {{ $('Webhook').item.json.body.body.program }}({{ $('Webhook').item.json.body.body.courseLang }})\n💰 *Total Value*: {{ $('Webhook').item.json.body.body.calculatedTotalValue }}CHF\n\n\n*System Status:*\n✅ PDF Contract: Created & Saved to Google Drive\n✅ Email Draft: Ready for review in Gmail\n\n*Action Required:*\nPlease check your Gmail drafts and hit send.\n\nGood job, Boss! 🤖",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2912,
+        192
+      ],
+      "id": "e94a2273-f5c1-4660-996e-427a18a021f2",
+      "name": "notify success",
+      "webhookId": "2657261f-e736-4315-aa9b-7e6924f96cca",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        416
+      ],
+      "id": "fe438fc9-e3d4-4c40-a477-aa79fcf05cfb",
+      "name": "Telegram Trigger",
+      "webhookId": "2e262200-6c62-4a47-ad94-457a3583dd83",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "/contracts new",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "227b4fb4-cc41-461c-b097-541ff391ac89"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        416
+      ],
+      "id": "18815915-9811-4fab-a9e8-275fe9aa16de",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Please select your preferred language:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🇺🇸 English",
+                    "additionalFields": {
+                      "callback_data": "en"
+                    }
+                  },
+                  {
+                    "text": "🇩🇪 German",
+                    "additionalFields": {
+                      "callback_data": "de"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        416
+      ],
+      "id": "4ade8914-93df-4527-ac91-77f890cecc64",
+      "name": "Send a text message",
+      "webhookId": "6312a8dc-6a8c-4229-9238-c568fb6bb816",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "en",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e98bb875-3e97-4554-b3e8-bdaef5a9b53c"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "41199bc1-646c-46b3-9f56-86faa1795cb7",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "de",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        736
+      ],
+      "id": "a94673b2-a417-48a6-9e94-359c1b7897b7",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        736
+      ],
+      "id": "52ee69d6-83b5-48b1-a711-0093cd240fbb",
+      "name": "Telegram Trigger1",
+      "webhookId": "90144419-da01-4486-bf57-3e27981c1c8a",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.callback_query.message.chat.id }}",
+        "text": "Here is the English Form:https://n8n-form-freelance-gi8y.vercel.app/",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        640
+      ],
+      "id": "dbff62df-0c21-4ddf-99d0-a5c2e7f09686",
+      "name": "Send a text message1",
+      "webhookId": "6d4d32e0-bd1a-4894-a71b-0c987846bab8",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.callback_query.message.chat.id }}",
+        "text": "Hier ist das deutsche Formular: https://n8n-form-freelance-gi8y.vercel.app/",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        832
+      ],
+      "id": "894ca1da-7329-4f3b-b2eb-cd6f917abed7",
+      "name": "Send a text message2",
+      "webhookId": "65215c72-e805-48dc-8f41-0c16ca33e37f",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        896,
+        432
+      ],
+      "id": "5357787e-d030-408d-89eb-ab6a29bde2e6",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "5872462022",
+        "text": "=🚨 Workflow Error! Reason: {{ $execution.error.message }} Link: {{ $execution.url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1104,
+        432
+      ],
+      "id": "ff985414-6382-46e1-8be6-4088c944e026",
+      "name": "Send a text message3",
+      "webhookId": "33ba6753-d31e-4252-a23d-dacb28f2f583",
+      "credentials": {
+        "telegramApi": {
+          "id": "ewcvBwc3KmDSoFEY",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "submit-contract",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        96
+      ],
+      "id": "8d2e50df-14b5-4b7f-850c-f2e1353819f5",
+      "name": "Webhook",
+      "webhookId": "231f9396-0cd0-4b8e-b865-5375cf61f974"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Create folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create folder": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Copy file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy file": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Update Client Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Client Info": {
+      "main": [
+        [
+          {
+            "node": "Update Contract Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Contract Details": {
+      "main": [
+        [
+          {
+            "node": "Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Save PDF to Drive",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save PDF to Drive": {
+      "main": [
+        []
+      ]
+    },
+    "Create a draft": {
+      "main": [
+        [
+          {
+            "node": "notify success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notify success": {
+      "main": [
+        []
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a text message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "28f5ece4-fe68-4ebd-bfdf-daf0f12d65a3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a639eeaccec4035c591a784d6761619d0b9ff5e421b6a86b5d11932484744c91"
+  },
+  "id": "ZxLvegxTRO2Q8DwE6h-OZ",
+  "tags": []
+}

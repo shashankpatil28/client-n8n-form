@@ -1,0 +1,49 @@
+{
+  "body": {
+    "language": "English",
+    "invoiceNumber": "2024/IN/001",
+    "contractNumber": "CNT-2024-001",
+    "issueDate": "2024-02-06",
+    "dueDate": "2024-02-13",
+    "debtorName": "John Doe",
+    "debtorEmail": "john.doe@example.com",
+    "debtorStreet": "Main Street",
+    "debtorHouse": "123",
+    "debtorApt": "4B",
+    "debtorCity": "Zurich",
+    "debtorZip": "8001",
+    "debtorCountry": "Switzerland",
+    "items": [
+      {
+        "name": "German Language Course - A1 Level",
+        "quantity": 20,
+        "unit": "hrs",
+        "unitPrice": 75
+      },
+      {
+        "name": "German Language Course - A2 Level",
+        "quantity": 20,
+        "unit": "hrs",
+        "unitPrice": 75
+      },
+      {
+        "name": "Course Materials and Books",
+        "quantity": 1,
+        "unit": "qty",
+        "unitPrice": 150
+      }
+    ],
+    "discount": 10,
+    "extraNote": "Please transfer the payment to our bank account within 7 days. Thank you for choosing our language school!",
+    "installments": [
+      {
+        "date": "2024-02-13",
+        "amount": 765
+      },
+      {
+        "date": "2024-03-13",
+        "amount": 765
+      }
+    ]
+  }
+}
