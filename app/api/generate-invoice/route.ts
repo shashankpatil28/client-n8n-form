@@ -47,56 +47,73 @@ export async function POST(request: NextRequest) {
 }
 
 // Optional: GET endpoint for testing with sample data
-export async function GET() {
+// Use ?lang=english or ?lang=german to test different languages
+export async function GET(request: NextRequest) {
   try {
+    // Get language from query parameter (default: German)
+    const searchParams = request.nextUrl.searchParams;
+    const lang = searchParams.get('lang')?.toLowerCase() || 'german';
+    const isEnglish = lang === 'english' || lang === 'en';
+
     // Sample invoice data for testing
     const sampleData = {
-      language: 'EN' as const,
-      invoiceNumber: '2024/IN/001',
-      contractNumber: 'CNT-2024-001',
-      issueDate: '2024-02-06',
-      dueDate: '2024-02-13',
-      clientName: 'John Doe',
-      clientEmail: 'john.doe@example.com',
-      clientAddress: 'Main Street 123, Apt 4B',
-      clientCity: 'Zurich',
-      clientZip: '8001',
-      clientCountry: 'Switzerland',
-      items: [
-        {
-          description: 'German Language Course - A1 Level',
-          quantity: 20,
-          unit: 'hrs',
-          unitPrice: 75,
-        },
-        {
-          description: 'Course Materials and Books',
-          quantity: 1,
-          unit: 'qty',
-          unitPrice: 150,
-        },
-      ],
-      subtotal: 1650,
-      discount: 10,
-      total: 1485,
-      extraNote: 'Please transfer the payment to our bank account within 7 days.',
-      installments: [
-        { date: '2024-02-13', amount: 742.5 },
-        { date: '2024-03-13', amount: 742.5 },
-      ],
+      body: {
+        language: isEnglish ? 'English' : 'German',
+        debtorName: isEnglish ? 'John Smith' : 'Max Mustermann',
+        debtorEmail: isEnglish ? 'john@example.com' : 'max@example.com',
+        debtorStreet: isEnglish ? 'Main Street' : 'Bahnhofstrasse',
+        debtorHouse: '123',
+        debtorApt: isEnglish ? 'Apt 4B' : '',
+        debtorCity: isEnglish ? 'Zurich' : 'Zürich',
+        debtorZip: '8001',
+        debtorCountry: 'Switzerland',
+        contractNumber: 'CNT-2024-001',
+        invoiceNumber: '2024/IN/001',
+        issueDate: '2024-02-15',
+        dueDate: '2024-02-29',
+        items: [
+          {
+            name: isEnglish ? 'German Course A1 - Beginner' : 'Deutschkurs A1 - Anfänger',
+            quantity: 20,
+            unit: isEnglish ? 'hrs' : 'Std',
+            unitPrice: 75,
+          },
+          {
+            name: isEnglish ? 'Course Materials and Books' : 'Kursmaterialien und Bücher',
+            quantity: 1,
+            unit: isEnglish ? 'pcs' : 'Stk',
+            unitPrice: 150,
+          },
+        ],
+        discount: 10,
+        extraNote: isEnglish
+          ? 'Thank you for your trust. If you have any questions, please feel free to contact us.'
+          : 'Vielen Dank für Ihr Vertrauen. Bei Fragen stehen wir Ihnen gerne zur Verfügung.',
+        installments: [
+          {
+            date: '2024-02-29',
+            amount: 742.5,
+          },
+          {
+            date: '2024-03-29',
+            amount: 742.5,
+          },
+        ],
+      },
     };
 
-    console.log('Generating sample invoice PDF...');
-    const pdfBuffer = await generateInvoicePDF(sampleData);
+    console.log(`Generating sample invoice PDF in ${isEnglish ? 'English' : 'German'}...`);
+    const invoiceData = transformN8nToInvoiceData(sampleData);
+    const pdfBuffer = await generateInvoicePDF(invoiceData);
 
     // Convert Buffer → Uint8Array (compatible with NextResponse)
     const pdfBytes = new Uint8Array(pdfBuffer);
-    
+
     return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sample-invoice.pdf"',
+        'Content-Disposition': `attachment; filename="sample-invoice-${isEnglish ? 'en' : 'de'}.pdf"`,
         'Content-Length': pdfBuffer.length.toString(),
       },
     });
